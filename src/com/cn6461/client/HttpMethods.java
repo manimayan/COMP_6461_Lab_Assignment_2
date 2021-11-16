@@ -10,6 +10,8 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
+
 // TODO: Auto-generated Javadoc
 /**
  * The Class HttpMethods.
@@ -18,13 +20,13 @@ public class HttpMethods {
 
 	/** The Constant PORT. */
 	static final Integer PORT = 6876;
-	
+
 	/** The Constant GETURL. */
 	static final String GETURL = "http://httpbin.org/get?course=networking&assignment=1";
-	
+
 	/** The Constant POSTURL. */
 	static final String POSTURL = "http://httpbin.org/post";
-	
+
 	/** The Constant REDIRECT_URL. */
 	static final String REDIRECT_URL = "https://httpbingo.org/redirect-to?url=http://www.example.com";
 
@@ -69,7 +71,7 @@ public class HttpMethods {
 	/**
 	 * API post call.
 	 *
-	 * @param url the url
+	 * @param url  the url
 	 * @param data the data
 	 * @return the map
 	 * @throws IOException Signals that an I/O exception has occurred.
@@ -111,19 +113,32 @@ public class HttpMethods {
 	/**
 	 * File server get call.
 	 *
-	 * @param url the url
+	 * @param url     the url
+	 * @param command
 	 * @return the map
 	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
-	public static Map<String, String> fileServerGetCall(String url) throws IOException {
-
+	public static Map<String, String> fileServerGetCall(String url, String command) throws IOException {
+		// text/plain
+		// application/json
+		// attachment; filename="filename.jpg"
+		// inline
 		Map<String, String> responseMap = new HashMap<>();
 		String[] urlPort = url.split(" ");
 		URL urlObject = new URL(urlPort[0]);
+		String headerString = StringUtils.substringBetween(command, "\"", "\"");
+		String[] headers = null;
+		if (headerString != null) {
+			headers = headerString.split("~");
+		}
 		try (Socket socket = new Socket(InetAddress.getByName(urlObject.getHost()), PORT)) {
 			PrintWriter printWriter = new PrintWriter(socket.getOutputStream());
 			printWriter.println(urlObject.getFile() + " HTTP/1.0");
 			printWriter.println("Host: " + urlObject.getHost());
+			if (headerString != null) {
+				printWriter.println(headers[0]);
+				printWriter.println(headers[1]);
+			}
 			printWriter.println("");
 			printWriter.flush();
 			try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));) {
@@ -150,7 +165,7 @@ public class HttpMethods {
 	/**
 	 * File server post call.
 	 *
-	 * @param url the url
+	 * @param url  the url
 	 * @param data the data
 	 * @return the map
 	 * @throws IOException Signals that an I/O exception has occurred.

@@ -16,6 +16,8 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.Scanner;
 
+import org.apache.commons.lang3.StringUtils;
+
 public class Server {
 
 	public static final String STATUS_OK = "200 OK";
@@ -27,8 +29,8 @@ public class Server {
 	/**
 	 * Run.
 	 *
-	 * @param port the port
-	 * @param verbose the verbose
+	 * @param port      the port
+	 * @param verbose   the verbose
 	 * @param directory the directory
 	 */
 	public static void run(int port, boolean verbose, String directory) {
@@ -98,9 +100,42 @@ public class Server {
 		} catch (FileNotFoundException fe) {
 			returnCode = STATUS_NOT_FOUND;
 		} catch (Exception e) {
-			returnCode = STATUS_ERROR;
 		}
-		Server.sendResponse(client, returnCode, content);
+		String updatedContent = null;
+		if (!StringUtils.isEmpty(content) && request.size() > 2) {
+			String contentType = createContentType(request, content);
+			updatedContent = createContentDisposition(request, contentType, HttpFileServer.validDirectory);
+		}
+		Server.sendResponse(client, returnCode,
+				StringUtils.isEmpty(content) ? "File not found" : updatedContent != null ? updatedContent : content,
+				request.size() > 2 ? request.get(2) : "Content-Type: text/plain");
+	}
+
+	private static String createContentType(List<String> request, String content) {
+		String contentType = request.get(2);
+		if (contentType.contains("application/json")) {
+			String[] contentArray = content.split("\n");
+			String updatedContent = new String();
+			for (String string : contentArray) {
+				updatedContent += string + ", ";
+			}
+			content = "data : { " + updatedContent + "}";
+		}
+		return content;
+	}
+
+	private static String createContentDisposition(List<String> request, String content, String validDirectory)
+			throws FileNotFoundException {
+		String contentDisposition = request.get(3);
+		String fileName = null;
+		if (contentDisposition.contains("attachment")) {
+			fileName = StringUtils.substringBetween(contentDisposition, "^", "^");
+			try (PrintWriter pw = new PrintWriter(new FileOutputStream(validDirectory + fileName, true));) {
+				pw.write(content);
+			}
+			return "data fetched in " + fileName;
+		}
+		return content;
 	}
 
 	private static String makeGetUrl(List<String> request, String directory) {
@@ -118,7 +153,7 @@ public class Server {
 					pw.write(request.get(3));
 				}
 			} else if (!file.isFile()) {
-				returnCode = STATUS_NOT_FOUND;
+				returnCode = STATUS_CREATED;
 				try (PrintWriter pw = new PrintWriter(new FileOutputStream(makePostUrl(request, directory)));) {
 					pw.write(request.get(3));
 				}
@@ -132,7 +167,7 @@ public class Server {
 		} catch (Exception e) {
 			returnCode = STATUS_ERROR;
 		}
-		Server.sendResponse(client, returnCode, "Data Created:\r\n"+request.get(3));
+		Server.sendResponse(client, returnCode, "Data Created:\r\n" + request.get(3), "Content-Type: text/plain");
 	}
 
 	private static String makePostUrl(List<String> request, String directory) {
@@ -141,14 +176,15 @@ public class Server {
 		return directory + splitURL[2].trim();
 	}
 
-	public static void sendResponse(Socket client, String responseCode, String content) throws IOException {
+	public static void sendResponse(Socket client, String responseCode, String content, String contentType)
+			throws IOException {
 		SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");
 		OutputStream clientOutput = client.getOutputStream();
 		StringBuilder clientResponse = new StringBuilder();
 		clientResponse.append("HTTP/1.0 " + responseCode + "\r\n");
 		clientResponse.append("Server: " + client.getInetAddress() + "\r\n");
 		clientResponse.append(sdf.format(Calendar.getInstance().getTime()));
-		clientResponse.append("\r\nContent-Type: application/json\r\n");
+		clientResponse.append("\r\n" + contentType + "\r\n");
 		clientResponse.append("Content-Length:" + content.getBytes().length + "\r\n");
 		clientResponse.append("\n" + content + "\n");
 		clientOutput.write(clientResponse.toString().getBytes());

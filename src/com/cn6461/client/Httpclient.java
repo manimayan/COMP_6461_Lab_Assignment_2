@@ -79,7 +79,7 @@ public class Httpclient {
 					}
 					String method = input[1].equalsIgnoreCase("get") ? "GET" : input[1].equalsIgnoreCase("post") ? "POST" : "";
 					if(method.equalsIgnoreCase("GET")) {
-						responseMap = HttpMethods.fileServerGetCall(URL+" "+method);
+						responseMap = HttpMethods.fileServerGetCall(URL+" "+method,command);
 					} if(method.equalsIgnoreCase("POST")) {
 						responseMap = HttpMethods.fileServerPostCall(URL+" "+method, StringUtils.substringBetween(command, "{", "}"));
 					}
