@@ -18,7 +18,7 @@ File Not Found Test
 httpc get -l 'http://localhost:6876/get/foos'
 
 Post Test
-httpc post -l --d {"love you": 1} 'http://localhost:6876/post/madhuma'
+httpc post -l --d {"CN_ASSIGNMENT": 2} 'http://localhost:6876/post/6461'
 
 Headers
 "Content-Type: application/json"
@@ -26,4 +26,5 @@ Headers
 
 "Content-Disposition: attachment; filename=\"disposition.txt\""
 "Content-Disposition: inline"
+
 
